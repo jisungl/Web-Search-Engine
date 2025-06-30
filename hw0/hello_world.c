@@ -9,6 +9,10 @@
  * author.
  */
 
+/*
+Jisung Lee
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -16,6 +20,6 @@
 int main(int argc, char **argv) {
   int a = 0xCAFEF00D, b = 0x13AECEE2;
 
-  printf("The magic code is: %X\n", a + b);
+  printf("The magic word is: %X\n", a + b);
   return EXIT_SUCCESS;
 }
