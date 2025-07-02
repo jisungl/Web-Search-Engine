@@ -97,8 +97,27 @@ bool LinkedList_Pop(LinkedList *list, LLPayload_t *payload_ptr) {
   // and (b) the general case of a list with >=2 elements in it.
   // Be sure to call free() to deallocate the memory that was
   // previously allocated by LinkedList_Push().
+  if (list->num_elements == 0) {
+    // empty list
+    return false;
+  }
 
-  return true;  // you may need to change this return value
+  LinkedListNode* pop = list->head;
+
+  if (list->num_elements == 1) {  
+    // one element
+    list->head = NULL;
+    list->tail = NULL;
+  } else {
+    // >= 2 elements
+    list->head = list->head->next;
+    list->head->prev = NULL;
+  }
+
+  *payload_ptr = pop->payload;
+  free(pop);
+  list->num_elements--;
+  return true;
 }
 
 void LinkedList_Append(LinkedList *list, LLPayload_t payload) {
@@ -107,6 +126,7 @@ void LinkedList_Append(LinkedList *list, LLPayload_t payload) {
   // STEP 5: implement LinkedList_Append.  It's kind of like
   // LinkedList_Push, but obviously you need to add to the end
   // instead of the beginning.
+  
 }
 
 void LinkedList_Sort(LinkedList *list, bool ascending,
