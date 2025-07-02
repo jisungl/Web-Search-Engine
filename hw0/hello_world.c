@@ -11,6 +11,7 @@
 
 /*
 Jisung Lee
+jisung@uw.edu
 */
 
 #include <stdio.h>
