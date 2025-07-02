@@ -79,7 +79,11 @@ void LinkedList_Push(LinkedList *list, LLPayload_t payload) {
     list->num_elements = 1;
   } else {
     // STEP 3: typical case; list has >=1 elements
-    
+    ln->next = list->head;
+    Verify333(ln->prev == NULL); // ????????????
+    list->head->prev = ln;
+    list->head = ln;
+    list->num_elements++;
   }
 }
 
