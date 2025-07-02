@@ -1,3 +1,6 @@
+//jisung lee
+//jisung@uw.edu
+
 /*
  * Copyright ©2025 Hal Perkins.  All rights reserved.  Permission is
  * hereby granted to students registered for University of Washington
@@ -26,7 +29,9 @@ LinkedList* LinkedList_Allocate(void) {
   Verify333(ll != NULL);
 
   // STEP 1: initialize the newly allocated record structure.
-
+  ll->num_elements = 0;
+  ll->head = NULL;
+  ll->tail = NULL;
   // Return our newly minted linked list.
   return ll;
 }
