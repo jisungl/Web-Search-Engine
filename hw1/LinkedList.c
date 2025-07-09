@@ -80,7 +80,7 @@ void LinkedList_Push(LinkedList *list, LLPayload_t payload) {
   } else {
     // STEP 3: typical case; list has >=1 elements
     ln->next = list->head;
-    Verify333(ln->prev == NULL); // ????????????
+    ln->prev = NULL;
     list->head->prev = ln;
     list->head = ln;
     list->num_elements++;
@@ -103,14 +103,14 @@ bool LinkedList_Pop(LinkedList *list, LLPayload_t *payload_ptr) {
   }
 
   LinkedListNode* pop = list->head;
-
+  
   if (list->num_elements == 1) {  
     // one element
     list->head = NULL;
     list->tail = NULL;
   } else {
     // >= 2 elements
-    list->head = list->head->next;
+    list->head = pop->next;
     list->head->prev = NULL;
   }
 
@@ -126,7 +126,22 @@ void LinkedList_Append(LinkedList *list, LLPayload_t payload) {
   // STEP 5: implement LinkedList_Append.  It's kind of like
   // LinkedList_Push, but obviously you need to add to the end
   // instead of the beginning.
-  
+  LinkedListNode *ln = (LinkedListNode *) malloc(sizeof(LinkedListNode));
+  Verify333(ln != NULL);
+  ln->payload = payload;
+  ln->next = NULL;
+
+  if (list->num_elements == 0) {
+    ln->prev = NULL;
+    list->head = ln;
+    list->tail = ln;
+  } else {
+    ln->prev = list->tail;
+    list->tail->next = ln;
+    list->tail = ln;
+  }
+
+  list->num_elements++;
 }
 
 void LinkedList_Sort(LinkedList *list, bool ascending,
