@@ -217,8 +217,9 @@ bool LLIterator_Next(LLIterator *iter) {
   // you succeed, false otherwise
   // Note that if the iterator is already at the last node,
   // you should move the iterator past the end of the list
+  iter->node = iter->node->next;
 
-  return true;  // you may need to change this return value
+  return (iter->node != NULL);  // you may need to change this return value
 }
 
 void LLIterator_Get(LLIterator *iter, LLPayload_t *payload) {
@@ -248,8 +249,36 @@ bool LLIterator_Remove(LLIterator *iter,
   // the iterator is pointing to, and also free any LinkedList
   // data structure element as appropriate.
 
+    LinkedList *list = iter->list;
+    LinkedListNode *remove = iter->node;
+    bool empty = false;
 
-  return true;  // you may need to change this return value
+    if (list->num_elements == 1) {
+      // one node
+      list->head = NULL;
+      list->tail = NULL;
+      empty = true;
+      iter->node = NULL;
+    } else if (remove == list->head) { 
+      // remove head
+      list->head = remove->next;
+      list->head->prev = NULL;
+      iter->node = remove->next;
+    } else if (remove == list->tail) { //remove tail
+      list->tail = remove->prev;
+      list->tail->next = NULL;
+      iter->node = remove->prev;
+    } else { //remove middle
+      remove->prev->next = remove->next;
+      remove->next->prev = remove->prev;
+      iter->node = remove->next;
+    }
+
+    payload_free_function(remove->payload);
+    free(remove);
+    list->num_elements--;
+
+    return !empty;
 }
 
 
