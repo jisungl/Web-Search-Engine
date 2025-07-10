@@ -264,11 +264,13 @@ bool LLIterator_Remove(LLIterator *iter,
       list->head = remove->next;
       list->head->prev = NULL;
       iter->node = remove->next;
-    } else if (remove == list->tail) { //remove tail
+    } else if (remove == list->tail) { 
+      //remove tail
       list->tail = remove->prev;
       list->tail->next = NULL;
       iter->node = remove->prev;
-    } else { //remove middle
+    } else { 
+      //remove middle
       remove->prev->next = remove->next;
       remove->next->prev = remove->prev;
       iter->node = remove->next;
@@ -290,6 +292,26 @@ bool LLSlice(LinkedList *list, LLPayload_t *payload_ptr) {
   Verify333(list != NULL);
 
   // STEP 8: implement LLSlice.
+  if (list->num_elements == 0) {
+    // no nodes
+    return false; 
+  }
+
+  LinkedListNode *tail = list->tail;
+
+  if (list->num_elements == 1) {
+    // one node
+    list->head = NULL;
+    list->tail = NULL;
+  } else {
+    // > 1 nodes
+    list->tail = tail->prev;
+    list->tail->next = NULL;
+  }
+
+  *payload_ptr = tail->payload;
+  free(tail);
+  list->num_elements--;
 
   return true;  // you may need to change this return value
 }
