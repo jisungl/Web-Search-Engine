@@ -137,7 +137,37 @@ bool HashTable_Insert(HashTable *table,
   // and optionally remove a key within a chain, rather than putting
   // all that logic inside here.  You might also find that your helper
   // can be reused in steps 2 and 3.
+  HTKeyValue_t *kv = NULL;
+  LLIterator *it = LLIterator_Allocate(chain);
+  
+  // check for existing key
+  while (LLIterator_IsValid(it)) {
+    HTKeyValue_t *entry;
+    LLIterator_Get(it, (LLPayload_t*)&entry);
+    if (entry->key == newkeyvalue.key) {
+      kv = entry;
+      break;
+    }
+    LLIterator_Next(it);
+  }
+  
+  if (kv != NULL) {
+    // key already exists, replace
+    if (oldkeyvalue != NULL) {
+      *oldkeyvalue = *kv;
+    }
+    kv->value = newkeyvalue.value;
+    LLIterator_Free(it);
+    return true;
+  }
+  
+  // new key
+  HTKeyValue_t *new = (HTKeyValue_t*) malloc(sizeof(HTKeyValue_t));
+  *new = newkeyvalue;
+  LinkedList_Append(chain, (LLPayload_t)new);
+  LLIterator_Free(it);
 
+  table->num_elements++;
   return 0;  // you may need to change this return value
 }
 
@@ -147,7 +177,23 @@ bool HashTable_Find(HashTable *table,
   Verify333(table != NULL);
 
   // STEP 2: implement HashTable_Find.
+  HTKeyValue_t *kv;
+  LinkedList *list = table->buckets[HashKeyToBucketNum(table, key)];
+  LLIterator *it = LLIterator_Allocate(list);
 
+  // look for key
+  while (LLIterator_IsValid(it)) {
+    LLIterator_Get(it, (LLPayload_t *)&kv);
+
+    if (kv->key == key) {
+      *keyvalue = *kv; // get kv pair
+      LLIterator_Free(it);
+      return true;
+    }
+    LLIterator_Next(it);
+  }
+
+  LLIterator_Free(it);
   return false;  // you may need to change this return value
 }
 
@@ -157,7 +203,23 @@ bool HashTable_Remove(HashTable *table,
   Verify333(table != NULL);
 
   // STEP 3: implement HashTable_Remove.
+  HTKeyValue_t *kv;
+  LinkedList *list = table->buckets[HashKeyToBucketNum(table, key)];
+  LLIterator *it = LLIterator_Allocate(list);
 
+  while (LLIterator_IsValid(it)) {
+    LLIterator_Get(it, (LLPayload_t *)&kv);
+    if (kv->key == key) {
+      *keyvalue = *kv;
+      LLIterator_Remove(it, &free);
+      LLIterator_Free(it);
+      table->num_elements--;
+      return true;
+    }
+    LLIterator_Next(it);
+  }
+
+  LLIterator_Free(it);
   return 0;  // you may need to change this return value
 }
 
@@ -210,7 +272,7 @@ bool HTIterator_IsValid(HTIterator *iter) {
   Verify333(iter != NULL);
 
   // STEP 4: implement HTIterator_IsValid.
-
+  
   return true;  // you may need to change this return value
 }
 
