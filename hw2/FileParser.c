@@ -227,9 +227,29 @@ static void InsertContent(HashTable *tab, char *content) {
   // AddWordPosition() helper with appropriate arguments, e.g.,
   //     AddWordPosition(tab, wordstart, pos);
 
-  while (1) {
-    break;  // you may need to change this logic
+  while (*cur_ptr != '\0') {
+    if (isalpha(*cur_ptr)) {
+      *cur_ptr = tolower(*cur_ptr);
+
+      // start of new word?
+      if (cur_ptr== content ||!isalpha(*(cur_ptr - 1))) {
+        word_start = cur_ptr;
+      }
+    } else {
+      // at boundary
+      if (cur_ptr != content && isalpha(*(cur_ptr - 1))) {
+        *cur_ptr = '\0';
+        AddWordPosition(tab, word_start, word_start - content);
+      }
+    }
+    cur_ptr++;
   }  // end while-loop
+
+  if (isalpha(*(cur_ptr - 1))) {
+    // word exists at end of file
+    *cur_ptr = '\0';
+    AddWordPosition(tab, word_start, word_start - content);
+  }
 }
 
 static void AddWordPosition(HashTable *tab, char *word,
@@ -260,5 +280,12 @@ static void AddWordPosition(HashTable *tab, char *word,
     // No; this is the first time we've seen this word.  Allocate and prepare
     // a new WordPositions structure, and append the new position to its list
     // using a similar ugly hack as right above.
+    wp = (WordPositions *) malloc(sizeof(WordPositions));
+    wp->word = strdup(word);
+    wp->positions = LinkedList_Allocate();
+    LinkedList_Append(wp->positions, (LLPayload_t)(int64_t)pos);
+    kv.key = hash_key;
+    kv.value = (HTValue_t)wp;
+    HashTable_Insert(tab, kv, NULL);
   }
 }
