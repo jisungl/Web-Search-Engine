@@ -189,10 +189,8 @@ static void HandleDir(char *dirpath, DIR *d, DocTable **doctable,
       // If it is neither, skip the file.
       if (S_ISREG(st.st_mode)) {
         entries[i].is_dir = false;
-        // i++;
       } else if (S_ISDIR(st.st_mode)) {
         entries[i].is_dir = true;
-        // i++;
       } else {
         free(entries[i].path_name); //skip 'neither' files
         i--;
@@ -263,9 +261,7 @@ static void HandleFile(char *file_path, DocTable **doctable,
     // document ID, and positions linked list into the inverted index.
     HTIterator_Get(it, &kv);
     wp = (WordPositions*) kv.value;
-
-    // give positions to memindex
-    HTIterator_Remove(it, &kv);
+    HTIterator_Remove(it, &kv);// give positions to memindex
     wp = (WordPositions*) kv.value;
     MemIndex_AddPostingList(*index,wp->word, doc_id, wp->positions);
     // Since we've transferred ownership of the memory associated with both
