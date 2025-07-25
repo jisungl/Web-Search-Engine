@@ -116,8 +116,8 @@ char* ReadFileToString(const char *file_name, int *size) {
   // particular what the return values -1 and 0 imply.
   left_to_read = file_stat.st_size;
   while (left_to_read > 0) {
-    ssize_t offset = file_stat.st_size - left_to_read;
-    num_read = read(fd, buf + offset, left_to_read);
+    ssize_t diff = file_stat.st_size - left_to_read;
+    num_read = read(fd, buf + diff, left_to_read);
     if (num_read > 0) {
       left_to_read -= num_read;
       continue;
