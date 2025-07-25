@@ -152,8 +152,8 @@ void MemIndex_AddPostingList(MemIndex *index, char *word, DocID_t doc_id,
   // The entry's key is this docID and the entry's value
   // is the "postings" (ie, word positions list) we were passed
   // as an argument.
-  postings_kv.key = doc_id;
   postings_kv.value = postings;
+  postings_kv.key = doc_id;
   HashTable_Insert(wp->postings, postings_kv, &unused);
 }
 
@@ -182,15 +182,13 @@ LinkedList* MemIndex_Search(MemIndex *index, char *query[], int query_len) {
   if (HashTable_Find(index, key, &kv)) {
     wp = (WordPostings*) kv.value;
     HTIterator *it = HTIterator_Allocate(wp->postings);
-
     while(HTIterator_IsValid(it)) {
-      HTKeyValue_t doc_kv;
+      HTKeyValue_t kv;
       SearchResult *sr;
-      HTIterator_Get(it, &doc_kv);
+      HTIterator_Get(it, &kv);
       sr = (SearchResult*) malloc(sizeof(SearchResult));
-      sr->doc_id = doc_kv.key;
-      sr->rank = LinkedList_NumElements((LinkedList*)doc_kv.value);
-
+      sr->rank = LinkedList_NumElements((LinkedList*) kv.value);
+      sr->doc_id = kv.key;
       LinkedList_Append(ret_list, sr);
       HTIterator_Next(it);
     }
@@ -219,7 +217,12 @@ LinkedList* MemIndex_Search(MemIndex *index, char *query[], int query_len) {
     // Look up the next query word (query[i]) in the inverted index.
     // If there are no matches, it means the overall query
     // should return no documents, so free ret_list and return NULL.
-
+    key = FNVHash64((unsigned char*) query[i], strlen(query[i]));
+    if (!HashTable_Find(index, key, &kv)) {
+      LinkedList_Free(ret_list, (LLPayloadFreeFnPtr)free);
+      return NULL;
+    }
+    wp = (WordPostings*) kv.value;
 
 
     // STEP 6.
@@ -237,6 +240,15 @@ LinkedList* MemIndex_Search(MemIndex *index, char *query[], int query_len) {
     Verify333(ll_it != NULL);
     num_docs = LinkedList_NumElements(ret_list);
     for (j = 0; j < num_docs; j++) {
+      HTKeyValue_t kv;
+      SearchResult *sr;
+      LLIterator_Get(ll_it, (LLPayload_t*) &sr);
+      if (HashTable_Find(wp->postings, sr->doc_id, &kv)) {
+        sr->rank += LinkedList_NumElements((LinkedList*) kv.value);
+        LLIterator_Next(ll_it);
+      } else {
+        LLIterator_Remove(ll_it, (LLPayloadFreeFnPtr)free);
+      }
     }
     LLIterator_Free(ll_it);
 
