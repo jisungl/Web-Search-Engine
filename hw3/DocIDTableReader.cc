@@ -45,6 +45,9 @@ bool DocIDTableReader::LookupDocID(
     // STEP 1.
     // Slurp the next docid out of the current element.
     DocIDElementHeader curr_header;
+    Verify333(fseek(file_, curr, SEEK_SET) == 0);
+    Verify333(fread(&curr_header, sizeof(DocIDElementHeader), 1, file_) == 1);
+    curr_header.ToHostFormat();
 
 
     // Is it a match?
@@ -54,7 +57,13 @@ bool DocIDTableReader::LookupDocID(
       // std::list<DocPositionOffset_t>.  Be sure to push in the right
       // order, adding to the end of the list as you extract
       // successive positions.
-
+      Verify333(fseek(file_, curr + sizeof(DocIDElementHeader), SEEK_SET) == 0);
+      for (int i = 0; i < curr_header.num_positions; i++) {
+        DocIDElementPosition pos;
+        Verify333(fread(&pos, sizeof(DocIDElementPosition), 1, file_) == 1);
+        pos.ToHostFormat();
+        ret_val->push_back(pos.position);
+      }
 
       // STEP 3.
       // Return the positions list through the output parameter,
@@ -80,13 +89,16 @@ list<DocIDElementHeader> DocIDTableReader::GetDocIDList() const {
     // Seek to the next BucketRecord.  The "offset_" member
     // variable stores the offset of this docid table within
     // the index file.
-
+    IndexFileOffset_t bucketRecordOffset = offset_ + 
+      sizeof(BucketListHeader) + i * sizeof(BucketRecord);
+    Verify333(fseek(file_, bucketRecordOffset, SEEK_SET) == 0);
 
     // STEP 5.
     // Read in the chain length and bucket position fields from
     // the bucket_rec.
     BucketRecord bucket_rec;
-
+    Verify333(fread(&bucket_rec, sizeof(BucketRecord), 1, file_) == 1);
+    bucket_rec.ToHostFormat();
 
     // Sweep through the next bucket, iterating through each
     // chain element in the bucket.
@@ -99,11 +111,15 @@ list<DocIDElementHeader> DocIDTableReader::GetDocIDList() const {
       // Read the next element position from the bucket header.
       // and seek to the element itself.
       ElementPositionRecord element_pos;
-
+      Verify333(fread(&element_pos, sizeof(ElementPositionRecord), 1, file_) == 1);
+      element_pos.ToHostFormat();
+      Verify333(fseek(file_, element_pos.position, SEEK_SET) == 0);
 
       // STEP 7.
       // Read in the docid and number of positions from the element.
       DocIDElementHeader element;
+      Verify333(fread(&element, sizeof(DocIDElementHeader), 1, file_) == 1);
+      element.ToHostFormat();
 
 
       // Append it to our result list.

@@ -79,7 +79,32 @@ QueryProcessor::ProcessQuery(const vector<string> &query) const {
   // STEP 1.
   // (the only step in this file)
   vector<QueryProcessor::QueryResult> final_result;
+  for (int i = 0; i < array_len_; ++i) {
+    if (auto* reader = itr_array_[i]->LookupWord(query[0])) {
+      vector<IdxQueryResult> matches;
+      for (auto& j : reader->GetDocIDList()) {
+        matches.push_back({j.doc_id, j.num_positions});
+      }
+      delete reader;
 
+      for (size_t j = 1; j < query.size() && !matches.empty(); ++j) {
+        if (auto* tr = itr_array_[i]->LookupWord(query[j])) {
+          vector<IdxQueryResult> next;
+          for (auto& match : matches) {
+            list<DocPositionOffset_t> p;
+            if (tr->LookupDocID(match.doc_id, &p)) next.push_back({match.doc_id, match.rank + (int)p.size()});
+          }
+          delete tr;
+          matches = move(next);
+        } else matches.clear();
+      }
+
+      for (auto& match : matches) {
+        string n;
+        if (dtr_array_[i]->LookupDocID(match.doc_id, &n)) final_result.push_back({n, match.rank});
+      }
+    }
+  }
 
   // Sort the final results.
   sort(final_result.begin(), final_result.end());
