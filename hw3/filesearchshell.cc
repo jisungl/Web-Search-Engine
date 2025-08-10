@@ -16,6 +16,10 @@
 
 using std::cerr;
 using std::endl;
+using std::cout;
+using std::cin;
+using std::vector;
+using std::string;
 
 // Error usage message for the client to see
 // Arguments:
@@ -86,7 +90,39 @@ int main(int argc, char **argv) {
   // STEP 1:
   // Implement filesearchshell!
   // Probably want to write some helper methods ...
-  while (1) { break; }
+  std::list<std::string> i(argv + 1, argv + argc);
+  hw3::QueryProcessor qp(i, true);
+  while (1) {
+    cout << "Enter query:" << endl;
+    string line;
+    if (!std::getline(cin, line)) break;
+
+    string term;
+    vector<string> terms;
+
+    for (char c : line) {
+      if (std::isspace((unsigned char) c)) {
+        if (!term.empty()) { 
+          terms.push_back(term); 
+          term.clear(); 
+        }
+      } else {
+        term.push_back((char) std::tolower((unsigned char) c));
+      }
+    }
+
+    if (!term.empty()) terms.push_back(term);
+    if (terms.empty()) continue;
+
+    auto results = qp.ProcessQuery(terms);
+    if (results.empty()) {
+      cout << "  [no results]" << endl;
+    } else {
+      for (auto &result : results) {
+        cout << "  " << result.document_name << " (" << result.rank << ")" << endl;
+      }
+    }
+  }
 
   return EXIT_SUCCESS;
 }
