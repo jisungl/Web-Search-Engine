@@ -47,9 +47,21 @@ bool HttpConnection::GetNextRequest(HttpRequest *const request) {
   // next time the caller invokes GetNextRequest()!
 
   // STEP 1:
+  // look for end of header
+  size_t end = buffer_.find(kHeaderEnd);
+  while (end == string::npos) {
+    unsigned char tmp[1024];
+    int n = WrappedRead(fd_, tmp, sizeof(tmp));
+    if (n <= 0) return false;
+    buffer_.append(reinterpret_cast<char*>(tmp), n);
+    end = buffer_.find(kHeaderEnd);
+  }
+  string hdr = buffer_.substr(0, end);
+  *request = ParseRequest(hdr);
+  buffer_.erase(0, end + kHeaderEndLen);
+  return true;
 
-
-  return false;  // you may need to change this return value
+  // return false;  // you may need to change this return value
 }
 
 bool HttpConnection::WriteResponse(const HttpResponse &response) const {
@@ -86,7 +98,34 @@ HttpRequest HttpConnection::ParseRequest(const string &request) const {
   // Note: If a header is malformed, skip that line.
 
   // STEP 2:
+  vector<string> lines;
+  boost::split(lines, request, boost::is_any_of("\r\n"), boost::token_compress_on);
 
+  if (lines.empty()) {
+    req.set_uri("BAD_");
+    return req;
+  }
+
+  vector<string> parts;
+  boost::split(parts, lines[0], boost::is_any_of(" "), boost::token_compress_on);
+  if (parts.size() != 3 || parts[0] != "GET") {
+    req.set_uri("BAD_");
+    return req;
+  }
+
+  req.set_uri(parts[1]);
+  for (size_t i = 1; i < lines.size(); i++) {
+    string l = lines[i];
+    if (l.empty()) continue;
+    size_t colon = l.find(':');
+    if (colon == string::npos || colon == 0) continue;
+    string name = l.substr(0, colon);
+    string val  = l.substr(colon + 1);
+    boost::algorithm::trim(name);
+    boost::algorithm::trim(val);
+    if (!name.empty() && !val.empty())
+      req.AddHeader(name, val);
+  }
 
   return req;
 }
