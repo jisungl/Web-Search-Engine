@@ -1,16 +1,16 @@
 CXX = g++
-CXXFLAGS = -Wall -std=c++17 -g
+CXXFLAGS = -Wall -g -std=c++17
 
-all: ex10
+all: ex16
 
-ex10: ex10.o Vector.o
-	$(CXX) $(CXXFLAGS) -o ex10 ex10.o Vector.o
+ex16: ex16.o SocketUtils.o
+	$(CXX) $(CXXFLAGS) -o ex16 ex16.o SocketUtils.o
 
-ex10.o: ex10.cc Vector.h
-	$(CXX) $(CXXFLAGS) -c ex10.cc
+ex16.o: ex16.cc SocketUtils.h
+	$(CXX) $(CXXFLAGS) -c ex16.cc
 
-Vector.o: Vector.cc Vector.h
-	$(CXX) $(CXXFLAGS) -c Vector.cc
+SocketUtils.o: SocketUtils.cc SocketUtils.h
+	$(CXX) $(CXXFLAGS) -c SocketUtils.cc
 
 clean:
-	rm -f ex10 *.o *~
+	rm -f ex16 *.o *~
