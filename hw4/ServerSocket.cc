@@ -54,8 +54,7 @@ bool ServerSocket::BindAndListen(int ai_family, int *const listen_fd) {
   memset(&h, 0, sizeof(h));
 
   // validate family
-  if (ai_family != AF_INET && ai_family != AF_INET6 && ai_family != AF_UNSPEC)
-    return false;
+  if (ai_family != AF_INET && ai_family != AF_INET6 && ai_family != AF_UNSPEC) return false;
 
   h.ai_family = ai_family;
   h.ai_socktype = SOCK_STREAM;
@@ -114,9 +113,7 @@ bool ServerSocket::Accept(int *const accepted_fd,
   while (1) {
     cfd = accept(listen_sock_fd_, sa, &tlen);
     if (cfd < 0) {
-      if (errno == EAGAIN || errno == EINTR) {
-        continue;
-      }
+      if (errno == EAGAIN || errno == EINTR) continue;
       return false;
     }
     break;
