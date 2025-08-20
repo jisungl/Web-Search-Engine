@@ -168,14 +168,19 @@ static void HttpServer_ThrFn(ThreadPool::Task *t) {
   // this function.
 
   // STEP 1:
+  HttpConnection conn(hst->client_fd);
   HttpRequest rq;  // you should probably initialize this somehow
   while (!hst->server_->IsShuttingDown()) {
-
+    if (!conn.GetNextRequest(&rq)) break;
     // If the client requested the server to shut down, do so.
     if (StringStartsWith(rq.uri(), "/quitquitquit")) {
       hst->server_->BeginShutdown();
       break;
     }
+
+    HttpResponse resp = ProcessRequest(rq, hst->base_dir, *hst->indices);
+    if (!conn.WriteResponse(resp)) break;
+    if (rq.GetHeaderValue("Connection") == "close") break;
   }
 }
 
@@ -218,18 +223,80 @@ static HttpResponse ProcessFileRequest(const string &uri,
   //
   // be sure to set the response code, protocol, and message
   // in the HttpResponse as well.
-  string file_name = "";
+  string name = "";
 
   // STEP 2:
+  URLParser p;
+  p.Parse(uri);
+  string path = p.path();
 
+  // check file request
+  if (!StringStartsWith(path, "/static/")) {
+    ret.set_protocol("HTTP/1.1");
+    ret.set_response_code(400);
+    ret.set_message("Bad Request");
+    ret.AppendToBody("<html><body>Invalid static file request</body></html>\n");
+    return ret;
+  }
 
-  // If you couldn't find the file, return an HTTP 404 error.
+  name = path.substr(8);
+  string full_path = base_dir + "/" + name;
+
+  // check file path
+  if (!IsPathSafe(base_dir, full_path)) {
+    ret.set_protocol("HTTP/1.1");
+    ret.set_response_code(403);
+    ret.set_message("Forbidden");
+    ret.AppendToBody("<html><body>Access denied</body></html>\n");
+    return ret;
+  }
+
+  FileReader reader(base_dir, name);
+  string contents;
+  if (!reader.ReadFile(&contents)) {
+    // couldnt find file
+    ret.set_protocol("HTTP/1.1");
+    ret.set_response_code(404);
+    ret.set_message("Not Found");
+    ret.AppendToBody("<html><body>Couldn't find file \""
+                     + EscapeHtml(name)
+                     + "\"</body></html>\n");
+    return ret;
+  }
+
   ret.set_protocol("HTTP/1.1");
-  ret.set_response_code(404);
-  ret.set_message("Not Found");
-  ret.AppendToBody("<html><body>Couldn't find file \""
-                   + EscapeHtml(file_name)
-                   + "\"</body></html>\n");
+  ret.set_response_code(200);
+  ret.set_message("OK");
+
+  size_t dot = name.find_last_of('.');
+  if (dot != string::npos) {
+    string suff = name.substr(dot);
+    boost::algorithm::to_lower(suff);
+
+    if (suff == ".html" || suff == ".htm") {
+      ret.set_content_type("text/html");
+    } else if (suff == ".txt") {
+      ret.set_content_type("text/plain");
+    } else if (suff == ".css") {
+      ret.set_content_type("text/css");
+    } else if (suff == ".js") {
+      ret.set_content_type("application/javascript");
+    } else if (suff == ".jpg" || suff == ".jpeg") {
+      ret.set_content_type("image/jpeg");
+    } else if (suff == ".png") {
+      ret.set_content_type("image/png");
+    } else if (suff == ".gif") {
+      ret.set_content_type("image/gif");
+    } else if (suff == ".xml") {
+      ret.set_content_type("application/xml");
+    } else if (suff == ".json") {
+      ret.set_content_type("application/json");
+    } else {
+      ret.set_content_type("application/octet-stream");
+    }
+  }
+
+  ret.AppendToBody(contents);
   return ret;
 }
 
@@ -260,7 +327,75 @@ static HttpResponse ProcessQueryRequest(const string &uri,
   //    tags!)
 
   // STEP 3:
+  URLParser p;
+  p.Parse(uri);
+  map<string, string> a = p.args();
+  // check for terms
+  if (a.find("terms") == a.end() || a["terms"].empty()) {
+    ret.set_protocol("HTTP/1.1");
+    ret.set_response_code(200);
+    ret.set_message("OK");
+    ret.set_content_type("text/html");
+    ret.AppendToBody(kThreegleStr);
+    return ret;
+  }
 
+  string search = a["terms"];
+  boost::algorithm::to_lower(search);
+  std::vector<string> terms;
+  boost::split(terms, search, boost::is_any_of(" "), boost::token_compress_on);
+
+  // remove empty terms
+  terms.erase(std::remove_if(terms.begin(), terms.end(), [](const string &s) { return s.empty(); }), terms.end());
+  if (terms.empty()) {
+    ret.set_protocol("HTTP/1.1");
+    ret.set_response_code(200);
+    ret.set_message("OK");
+    ret.set_content_type("text/html");
+    ret.AppendToBody(kThreegleStr);
+    return ret;
+  }
+  hw3::QueryProcessor qp(indices);
+  std::vector<hw3::QueryProcessor::QueryResult> results = qp.ProcessQuery(terms);
+  ret.set_protocol("HTTP/1.1");
+  ret.set_response_code(200);
+  ret.set_message("OK");
+  ret.set_content_type("text/html");
+
+  stringstream html;
+  html << kThreegleStr;
+  // search results section
+  html << "<p>\n";
+
+  if (results.empty()) {
+    html << "No results found for <b>" << EscapeHtml(search) << "</b>\n";
+  } else {
+    html << results.size() << " result" << (results.size() != 1 ? "s" : "") << " for <b>" << EscapeHtml(search) << "</b>\n";
+    html << "<br>\n";
+    
+    for (const auto &result : results) {
+      string name = result.document_name;
+      string path = "/static/";
+      if (name.find(base_dir) == 0) {
+        path += name.substr(base_dir.length());
+      } else {
+        path += name;
+      }
+      
+      boost::replace_all(path, "\\", "/");
+      boost::replace_all(path, "./", "");
+      while (path.find("//") != string::npos) {
+        boost::replace_all(path, "//", "/");
+      }
+      html << "<div style=\"margin-left: 20px;\">";
+      html << "<a href=\"" << path << "\">" << EscapeHtml(name) << "</a>";
+      html << " [" << result.rank << "]";
+      html << "</div>\n";
+    }
+  }
+
+  html << "</body></html>\n";
+  ret.AppendToBody(html.str());
   return ret;
 }
 

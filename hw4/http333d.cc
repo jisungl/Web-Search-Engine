@@ -101,5 +101,44 @@ static void GetPortAndPath(int argc,
   // - You have at least 1 index, and all indices are readable files
 
   // STEP 1:
+  if (argc < 4) Usage(argv[0]);
+  *port = atoi(argv[1]);
+  if (*port < 1024) {
+    cerr << "invalid port number" << endl;
+    Usage(argv[0]);
+  }
+  struct stat dir;
+  if (stat(argv[2], &dir) == -1) {
+    cerr << "path is unreadable" << endl;
+    Usage(argv[0]);
+  }
+
+  if (!S_ISDIR(dir.st_mode)) {
+    cerr << argv[2] << " is not a directory." << endl;
+    Usage(argv[0]);
+  }
+
+  // *path = std::string(argv[2]);
+  *path = argv[2];
+  for (int i = 3; i < argc; i++) {
+    std::string f(argv[i]);
+    if (f.length() >= 4 && f.substr(f.length() - 4) == ".idx") {
+      struct stat fs;
+      if (stat(argv[i], &fs) == -1) {
+        cerr << "paht is unreadable." << endl;
+        Usage(argv[0]);
+      }
+      if (!S_ISREG(fs.st_mode)) {
+        cerr << argv[i] << " is not a regular file." << endl;
+        Usage(argv[0]);
+      }
+      indices->push_back(argv[i]);
+    }
+  }
+
+  if (indices->empty()) {
+    cerr << "no readable files" << endl;
+    Usage(argv[0]);
+  }
 }
 
