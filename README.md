@@ -4,7 +4,7 @@ A multithreaded HTTP web server with integrated full-text search, written in C a
 
 **Note:** The project framework (header files, abstract classes, test harnesses, Makefiles, and utility functions) was provided by the course instructors. All implementation logic was written by me.
 
-## How It Works
+## Logistics
 
 **Crawling and indexing.** The engine recursively walks a directory tree, parses every text file it finds, and tokenizes contents into words with byte offset tracking. The results are stored in an in-memory inverted index — a mapping from every word in the corpus to the set of documents and positions where it appears — backed by a custom hash table and linked list implemented in C.
 
